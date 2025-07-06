@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Matrix Expression Evaluator</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.0/math.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 800px;
+      margin: auto;
+    }
+    textarea, input, button {
+      width: 100%;
+      margin-top: 10px;
+      font-size: 16px;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+    h2 { margin-top: 30px; }
+    pre {
+      background: #f4f4f4;
+      padding: 10px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Matrix Expression Evaluator</h1>
+
+  <label for="matrixA">Matrix A:</label>
+  <textarea id="matrixA" placeholder="e.g. 1 2 3; 4 5 6; 7 8 9"></textarea>
+
+  <label for="matrixB">Matrix B:</label>
+  <textarea id="matrixB" placeholder="e.g. 1 0 0; 0 1 0; 0 0 1"></textarea>
+
+  <label for="matrixC">Matrix C:</label>
+  <textarea id="matrixC" placeholder="Optional matrix C..."></textarea>
+
+  <label for="expression">Expression (e.g. A + 3 * B^2 + A * B):</label>
+  <input type="text" id="expression" placeholder="Enter matrix expression" />
+
+  <button onclick="evaluateExpression()">Evaluate</button>
+
+  <h2>Result:</h2>
+  <pre id="output"></pre>
+
+  <script>
+    function parseMatrix(input) {
+      if (!input.trim()) return null;
+      try {
+        const rows = input.trim().split(';').map(row =>
+          row.trim().split(/\s+/).map(Number)
+        );
+        return math.matrix(rows);
+      } catch (e) {
+        throw new Error("Invalid matrix format.");
+      }
+    }
+
+    function evaluateExpression() {
+      const output = document.getElementById("output");
+      output.textContent = "";
+
+      try {
+        const A = parseMatrix(document.getElementById("matrixA").value);
+        const B = parseMatrix(document.getElementById("matrixB").value);
+        const C = parseMatrix(document.getElementById("matrixC").value);
+
+        if (!A || !B) throw new Error("Please enter matrices A and B at minimum.");
+
+        const scope = {
+          A, B, C,
+          I: math.identity(A.size()[0]), // Identity of same order as A
+          det: (M) => math.det(M),
+          transpose: (M) => math.transpose(M),
+          inv: (M) => math.inv(M),
+          pow: (M, n) => math.pow(M, n)
+        };
+
+        // Preprocess expression
+        let expr = document.getElementById("expression").value
+          .replace(/([ABC])'/g, 'transpose($1)')       // A' -> transpose(A)
+          .replace(/([ABC])\^-1/g, 'inv($1)')           // B^-1 -> inv(B)
+          .replace(/det([ABC])/g, 'det($1)')        // det(A) -> det(A)
+          .replace(/([ABC])\^(\d+)/g, 'pow($1, $2)');   // B^3 -> pow(B, 3)
+
+        const result = math.evaluate(expr, scope);
+
+        // Format matrix nicely
+        if (math.typeOf(result) === 'Matrix') {
+          output.textContent = result.toString();
+        } else {
+          output.textContent = String(result);
+        }
+      } catch (err) {
+        output.textContent = "❌ Error: " + err.message;
+      }
+    }
+  </script>
+
+</body>
+</html>
